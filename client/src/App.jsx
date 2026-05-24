@@ -1,33 +1,23 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
-
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-
-    axios.get("http://localhost:5000/api/test")
-      .then((response) => {
-        setMessage(response.data.message);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-
-  }, []);
-
   return (
-    <div
-      style={{
-        textAlign: "center",
-        marginTop: "100px"
-      }}
-    >
-      <h1>Speech To Text App 🚀</h1>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
 
-      <h2>{message}</h2>
-    </div>
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/register" element={<Register />} />
+
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
