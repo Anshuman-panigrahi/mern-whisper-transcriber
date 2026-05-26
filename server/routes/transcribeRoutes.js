@@ -1,12 +1,10 @@
-const express = require("express");
+import express from "express";
+import multer from "multer";
+import authMiddleware from "../middleware/authMiddleware.js";
+import { transcribeAudio } from "../controllers/transcribeController.js";
 
 const router = express.Router();
-
-const { transcribeAudio } = require("../controllers/transcribeController");
-
-const upload = require("../middleware/uploadMiddleware");
-
-const authMiddleware = require("../middleware/authMiddleware");
+const upload = multer({ dest: "uploads/" });
 
 router.post(
   "/",
@@ -15,4 +13,4 @@ router.post(
   transcribeAudio
 );
 
-module.exports = router;
+export default router;

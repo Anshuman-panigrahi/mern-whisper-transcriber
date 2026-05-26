@@ -1,14 +1,24 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await axios.post(
@@ -19,37 +29,73 @@ const Login = () => {
         }
       );
 
-      localStorage.setItem("token", res.data.token);
-
-      alert("Login Successful");
-      navigate("/dashboard");
+      if (res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        console.log("✅ Login successful! Token saved.");
+        setError(null);
+        setTimeout(() => navigate("/dashboard"), 500);
+      } else {
+        setError("Login failed: No token received. Please try again.");
+      }
     } catch (error) {
-      console.log(error.response?.data || error);
-      alert(error.response?.data?.message || "Login Failed");
+      console.error("Login error:", error);
+      if (error.code === "ERR_NETWORK") {
+        setError("Cannot connect to server. Make sure backend is running on port 5001.");
+      } else if (error.response?.status === 400) {
+        setError(error.response.data?.message || "Invalid email or password");
+      } else if (error.response?.status === 500) {
+        setError("Server error. Please try again later.");
+      } else {
+        setError(error.response?.data?.message || "Login failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <form onSubmit={handleLogin} className="form">
-        <h1>Login</h1>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1>Welcome Back</h1>
+        <p>Sign in to your AuraScribe account</p>
 
-        <input
-          type="email"
-          placeholder="Enter Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <form onSubmit={handleLogin} className="form">
+          <div className="form-group">
+            <label htmlFor="login-email">Email Address</label>
+            <input
+              id="login-email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-        <input
-          type="password"
-          placeholder="Enter Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <div className="form-group">
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-        <button type="submit">Login</button>
-      </form>
+          {error && <div className="error-message">⚠️ {error}</div>}
+
+          <button type="submit" id="login-submit-btn" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="auth-link">
+          Don't have an account?{" "}
+          <Link to="/register">Create one here</Link>
+        </div>
+      </div>
     </div>
   );
 };

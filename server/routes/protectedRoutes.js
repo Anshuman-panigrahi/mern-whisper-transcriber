@@ -1,8 +1,7 @@
-const express = require("express");
+import express from "express";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
-
-const authMiddleware = require("../middleware/authMiddleware");
 
 router.get("/", authMiddleware, (req, res) => {
     res.json({
@@ -11,4 +10,4 @@ router.get("/", authMiddleware, (req, res) => {
     });
 });
 
-module.exports = router;
+export default router;

@@ -1,12 +1,12 @@
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
 
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+import authRoutes from "./routes/authRoutes.js";
+import transcribeRoutes from "./routes/transcribeRoutes.js";
 
-const authRoutes = require("./routes/authRoutes");
-const protectedRoutes = require("./routes/protectedRoutes");
-const transcribeRoutes = require("./routes/transcribeRoutes");
+dotenv.config();
 
 const app = express();
 
@@ -14,23 +14,43 @@ app.use(cors());
 
 app.use(express.json());
 
-app.use("/api/auth", authRoutes);
+console.log("Environment loaded:", {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+  HAS_MONGO_URI: !!process.env.MONGO_URI,
+  HAS_JWT_SECRET: !!process.env.JWT_SECRET,
+  HAS_ASSEMBLYAI_KEY: !!process.env.ASSEMBLYAI_API_KEY,
+});
 
-app.use("/api/protected", protectedRoutes);
-
-app.use("/api/transcribe", transcribeRoutes);
-
-mongoose
-  .connect(process.env.MONGO_URI)
+// MongoDB Connection
+console.log("Connecting to MongoDB...");
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("MongoDB Connected");
+    console.log("✅ MongoDB connected successfully");
   })
-  .catch((error) => {
-    console.log(error);
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+    console.error("MONGO_URI:", process.env.MONGO_URI ? "Configured" : "NOT CONFIGURED");
   });
 
-const PORT = process.env.PORT || 5001;
+// Auth Routes
+app.use("/api/auth", authRoutes);
+
+// Transcribe Routes
+app.use("/api/transcribe", transcribeRoutes);
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    mongoConnection: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+  });
+});
+
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/api/health`);
 });

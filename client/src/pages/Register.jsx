@@ -1,70 +1,136 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 function Register() {
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const navigate = useNavigate();
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields");
+      setLoading(false);
+      return;
+    }
 
-        try {
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
 
-            await axios.post(
-                "http://localhost:5001/api/auth/register",
-                {
-                    username,
-                    email,
-                    password
-                }
-            );
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      setLoading(false);
+      return;
+    }
 
-            alert("Register Successful");
-            navigate("/");
-
-        } catch (error) {
-            console.log(error.response?.data || error);
-            alert(error.response?.data?.message || "Register Failed");
+    try {
+      await axios.post(
+        "http://localhost:5001/api/auth/register",
+        {
+          username,
+          email,
+          password,
         }
+      );
 
-    };
+      setError(null);
+      setTimeout(() => {
+        navigate("/login");
+      }, 500);
+    } catch (error) {
+      console.error("Register error:", error);
+      if (error.code === "ERR_NETWORK") {
+        setError("Cannot connect to server. Make sure backend is running on port 5001.");
+      } else if (error.response?.data?.message?.includes("duplicate") || error.response?.data?.message?.includes("already exists")) {
+        setError("Email already exists. Please use a different email.");
+      } else {
+        setError(error.response?.data?.message || "Registration failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="container">
-            <form onSubmit={handleRegister} className="form">
-                <h1>Register</h1>
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1>Join AuraScribe</h1>
+        <p>Create your account to start transcribing</p>
 
-                <input
-                    type="text"
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                />
+        <form onSubmit={handleRegister} className="form">
+          <div className="form-group">
+            <label htmlFor="reg-username">Full Name</label>
+            <input
+              id="reg-username"
+              type="text"
+              placeholder="Enter your full name"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
 
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
+          <div className="form-group">
+            <label htmlFor="reg-email">Email Address</label>
+            <input
+              id="reg-email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+          <div className="form-group">
+            <label htmlFor="reg-password">Password</label>
+            <input
+              id="reg-password"
+              type="password"
+              placeholder="Create a password (min 6 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-                <button type="submit">
-                    Register
-                </button>
-            </form>
+          <div className="form-group">
+            <label htmlFor="reg-confirm-password">Confirm Password</label>
+            <input
+              id="reg-confirm-password"
+              type="password"
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          {error && <div className="error-message">⚠️ {error}</div>}
+
+          <button type="submit" id="register-submit-btn" disabled={loading}>
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
+
+        <div className="auth-link">
+          Already have an account?{" "}
+          <Link to="/login">Sign in here</Link>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
 export default Register;
