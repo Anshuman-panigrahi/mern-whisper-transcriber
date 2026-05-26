@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
 import transcribeRoutes from "./routes/transcribeRoutes.js";
@@ -9,6 +11,8 @@ import transcribeRoutes from "./routes/transcribeRoutes.js";
 dotenv.config();
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors());
 
@@ -46,6 +50,15 @@ app.get("/api/health", (req, res) => {
     timestamp: new Date().toISOString(),
     mongoConnection: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
+});
+
+// Serve static files from client build
+const clientBuildPath = path.join(__dirname, "../client/dist");
+app.use(express.static(clientBuildPath));
+
+// SPA Fallback: Serve index.html for all non-API routes (React Router handling)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(clientBuildPath, "index.html"));
 });
 
 const PORT = process.env.PORT || 5000;
