@@ -199,7 +199,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        "http://localhost:5001/api/transcribe",
+        "https://mern-whisper-transcriber.onrender.com/api/transcribe",
         formData,
         {
           headers: {
@@ -278,7 +278,7 @@ const Dashboard = () => {
       }
 
       const response = await axios.post(
-        "http://localhost:5001/api/transcribe",
+        "https://mern-whisper-transcriber.onrender.com/api/transcribe",
         formData,
         {
           headers: {

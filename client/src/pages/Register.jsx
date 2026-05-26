@@ -36,7 +36,7 @@ function Register() {
 
     try {
       await axios.post(
-        "http://localhost:5001/api/auth/register",
+        "https://mern-whisper-transcriber.onrender.com/api/auth/register",
         {
           username,
           email,
