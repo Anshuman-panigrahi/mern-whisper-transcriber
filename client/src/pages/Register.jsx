@@ -51,7 +51,7 @@ function Register() {
     } catch (error) {
       console.error("Register error:", error);
       if (error.code === "ERR_NETWORK") {
-        setError("Cannot connect to server. Make sure backend is running on port 5001.");
+        setError("Cannot connect to server. Please check your connection and try again.");
       } else if (error.response?.data?.message?.includes("duplicate") || error.response?.data?.message?.includes("already exists")) {
         setError("Email already exists. Please use a different email.");
       } else {

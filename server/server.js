@@ -14,7 +14,20 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors());
+// CORS Configuration for both development and production
+const corsOptions = {
+  origin: [
+    "http://localhost:5173", // Vite dev server
+    "http://localhost:3000", // Alternative dev
+    "https://mern-whisper-transcriber-njuyrstdq-anshuman-panigrahs-projects.vercel.app", // Production
+    "https://mern-whisper-transcriber.vercel.app" // Alternative production domain
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 

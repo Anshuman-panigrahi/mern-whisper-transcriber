@@ -40,7 +40,7 @@ const Login = () => {
     } catch (error) {
       console.error("Login error:", error);
       if (error.code === "ERR_NETWORK") {
-        setError("Cannot connect to server. Make sure backend is running on port 5001.");
+        setError("Cannot connect to server. Please check your connection and try again.");
       } else if (error.response?.status === 400) {
         setError(error.response.data?.message || "Invalid email or password");
       } else if (error.response?.status === 500) {
