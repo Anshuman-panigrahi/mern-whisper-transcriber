@@ -311,7 +311,7 @@ const Dashboard = () => {
     } else if (error.response?.status === 500) {
       setError(error.response.data?.message || "Server error. Please check your AssemblyAI API key in the .env file.");
     } else if (error.code === "ERR_NETWORK") {
-      setError("Cannot connect to server. Make sure backend is running on port 5001.");
+      setError("Cannot connect to server. Please check your connection and ensure the backend is running.");
     } else if (error.code === "ECONNABORTED") {
       setError("Request timed out. The file might be too large. Try a shorter audio clip.");
     } else {
