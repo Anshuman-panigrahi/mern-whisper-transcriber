@@ -37,7 +37,7 @@ function Register() {
       await axios.post(
         "https://mern-whisper-transcriber.onrender.com/api/auth/register",
         {
-          name: formData.name,
+          username: formData.name,
           email: formData.email,
           password: formData.password,
         }

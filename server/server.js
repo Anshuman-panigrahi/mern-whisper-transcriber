@@ -14,20 +14,12 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CORS Configuration for both development and production
-const corsOptions = {
-  origin: [
-    "http://localhost:5173", // Vite dev server
-    "http://localhost:3000", // Alternative dev
-    "https://mern-whisper-transcriber-njuyrstdq-anshuman-panigrahs-projects.vercel.app", // Production
-    "https://mern-whisper-transcriber.vercel.app" // Alternative production domain
-  ],
-  credentials: true,
+// CORS Configuration - allow all origins for deployment flexibility
+app.use(cors({
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
-};
-
-app.use(cors(corsOptions));
+}));
 
 app.use(express.json());
 
@@ -63,6 +55,11 @@ app.get("/api/health", (req, res) => {
     timestamp: new Date().toISOString(),
     mongoConnection: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
+});
+
+// API 404 handler - return JSON for unknown API routes (not the SPA HTML)
+app.all("/api/*", (req, res) => {
+  res.status(404).json({ message: "API route not found" });
 });
 
 // Serve static files from client build
