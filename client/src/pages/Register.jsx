@@ -61,56 +61,72 @@ function Register() {
 
         <p>Create your account to start transcribing</p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="form">
 
-          <input
-            type="text"
-            name="name"
-            placeholder="Full Name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+          <div className="form-group">
+            <label htmlFor="register-name">Full Name</label>
+            <input
+              id="register-name"
+              type="text"
+              name="name"
+              placeholder="Enter your full name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+          <div className="form-group">
+            <label htmlFor="register-email">Email Address</label>
+            <input
+              id="register-email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
+          <div className="form-group">
+            <label htmlFor="register-password">Password</label>
+            <input
+              id="register-password"
+              type="password"
+              name="password"
+              placeholder="Create a password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-          />
+          <div className="form-group">
+            <label htmlFor="register-confirm">Confirm Password</label>
+            <input
+              id="register-confirm"
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-          {error && <p>{error}</p>}
+          {error && <div className="error-message">⚠️ {error}</div>}
 
-          <button type="submit">
+          <button type="submit" id="register-submit-btn">
             Create Account
           </button>
 
         </form>
 
-        <p>
-          Already have an account?
-          <Link to="/login"> Sign in here </Link>
-        </p>
+        <div className="auth-link">
+          Already have an account?{" "}
+          <Link to="/login">Sign in here</Link>
+        </div>
 
       </div>
     </div>
