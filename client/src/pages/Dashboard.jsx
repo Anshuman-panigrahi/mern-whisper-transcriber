@@ -178,13 +178,6 @@ const Dashboard = () => {
     setLoading(true);
     setError(null);
 
-    // If we have live transcript, use it directly
-    if (liveTranscript.trim()) {
-      setTranscript(liveTranscript.trim());
-      setLoading(false);
-      return;
-    }
-
     // Otherwise send to server
     try {
       const formData = new FormData();

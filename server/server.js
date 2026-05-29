@@ -24,7 +24,7 @@ console.log("Environment loaded:", {
   NODE_ENV: process.env.NODE_ENV,
   HAS_MONGO_URI: !!process.env.MONGO_URI,
   HAS_JWT_SECRET: !!process.env.JWT_SECRET,
-  HAS_ASSEMBLYAI_KEY: !!process.env.ASSEMBLYAI_API_KEY,
+  HAS_ASSEMBLYAI_KEY: !!process.env.ASSEMBLY_API_KEY,
 });
 
 // MongoDB Connection
