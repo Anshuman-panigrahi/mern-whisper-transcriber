@@ -60,7 +60,7 @@ export const transcribeAudio = async (req, res) => {
           },
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
-          timeout: 60000, // 60s timeout for upload
+          timeout: 25000,
         }
       );
     } catch (uploadErr) {
@@ -88,14 +88,14 @@ export const transcribeAudio = async (req, res) => {
         "https://api.assemblyai.com/v2/transcript",
         {
           audio_url: audioUrl,
-          speech_model: "universal-2",
+          speech_models: ["universal-2"],
         },
         {
           headers: {
             authorization: apiKey,
             "content-type": "application/json",
           },
-          timeout: 30000, // 30s timeout
+          timeout: 15000,
         }
       );
     } catch (transcriptErr) {
@@ -115,49 +115,59 @@ export const transcribeAudio = async (req, res) => {
     const transcriptId = transcriptResponse.data.id;
     console.log("✅ Transcription started, ID:", transcriptId);
 
-    // ── Step 6: Poll for result ──
+    // ── Step 6: Safe synchronous polling under Render's 30s timeout ──
     let transcriptResult;
-    const maxPollingTime = 120000; // 2 minutes max
-    const pollingStart = Date.now();
+    // We poll at most 11 times, every 2 seconds = 22 seconds max.
+    // This leaves a safe buffer so we don't exceed Render's 30s timeout.
+    const maxPolls = 11;
+    let completed = false;
 
-    while (true) {
-      // Check timeout
-      if (Date.now() - pollingStart > maxPollingTime) {
-        console.error("❌ Polling timed out after", maxPollingTime / 1000, "seconds");
-        return res.status(504).json({
-          success: false,
-          message: "Transcription timed out. The audio may be too long. Try a shorter clip.",
-        });
-      }
+    for (let i = 0; i < maxPolls; i++) {
+      console.log(`🔄 Polling attempt ${i + 1}/${maxPolls}...`);
+      try {
+        const polling = await axios.get(
+          `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+          {
+            headers: {
+              authorization: apiKey,
+            },
+            timeout: 5000,
+          }
+        );
 
-      const polling = await axios.get(
-        `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
-        {
-          headers: {
-            authorization: apiKey,
-          },
-          timeout: 15000,
+        transcriptResult = polling.data;
+        console.log("🔄 Polling status:", transcriptResult.status);
+
+        if (transcriptResult.status === "completed") {
+          console.log("✅ Transcription completed successfully!");
+          completed = true;
+          break;
         }
-      );
 
-      transcriptResult = polling.data;
-      console.log("🔄 Polling status:", transcriptResult.status);
-
-      if (transcriptResult.status === "completed") {
-        console.log("✅ Transcription completed!");
-        break;
+        if (transcriptResult.status === "error") {
+          console.error("❌ AssemblyAI transcription error:", transcriptResult.error);
+          return res.status(502).json({
+            success: false,
+            message: "Transcription failed at AssemblyAI",
+            error: transcriptResult.error,
+          });
+        }
+      } catch (pollErr) {
+        console.warn("⚠️ Polling network warning:", pollErr.message);
       }
 
-      if (transcriptResult.status === "error") {
-        console.error("❌ AssemblyAI transcription error:", transcriptResult.error);
-        return res.status(502).json({
-          success: false,
-          message: "Transcription failed",
-          error: transcriptResult.error,
-        });
-      }
+      // Wait 2 seconds before the next poll
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
 
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+    if (!completed) {
+      console.warn("⚠️ Polling reached safe time limit before completion. Returning processing state.");
+      return res.status(202).json({
+        success: true,
+        status: "processing",
+        transcript: "Processing is taking longer than expected. Please check back in a moment or try a shorter clip.",
+        transcriptId: transcriptId
+      });
     }
 
     // ── Step 7: Cleanup and respond ──
@@ -167,6 +177,7 @@ export const transcribeAudio = async (req, res) => {
     res.status(200).json({
       success: true,
       transcript: transcriptResult.text,
+      text: transcriptResult.text
     });
   } catch (error) {
     console.error("❌ Unexpected transcription error:", {
