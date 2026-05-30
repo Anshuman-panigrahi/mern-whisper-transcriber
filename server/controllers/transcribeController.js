@@ -88,6 +88,7 @@ export const transcribeAudio = async (req, res) => {
         "https://api.assemblyai.com/v2/transcript",
         {
           audio_url: audioUrl,
+          speech_model: "universal-2",
         },
         {
           headers: {
