@@ -2,84 +2,195 @@ import axios from "axios";
 import fs from "fs";
 
 export const transcribeAudio = async (req, res) => {
+  const startTime = Date.now();
+  let filePath = null;
+
   try {
+    // ── Step 1: Validate file upload ──
     if (!req.file) {
+      console.error("❌ No audio file in request");
       return res.status(400).json({
         success: false,
         message: "No audio file uploaded",
       });
     }
 
-    const audioData = fs.readFileSync(req.file.path);
+    filePath = req.file.path;
+    console.log("📁 File received:", {
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      path: filePath,
+    });
 
-    // Upload audio to AssemblyAI
-    const uploadResponse = await axios.post(
-      "https://api.assemblyai.com/v2/upload",
-      audioData,
-      {
-        headers: {
-          authorization: process.env.ASSEMBLY_API_KEY,
-          "content-type": "application/octet-stream",
-        },
-      }
-    );
+    // ── Step 2: Read file from disk ──
+    if (!fs.existsSync(filePath)) {
+      console.error("❌ File not found on disk:", filePath);
+      return res.status(500).json({
+        success: false,
+        message: "Uploaded file not found on server. Please try again.",
+      });
+    }
+
+    const audioData = fs.readFileSync(filePath);
+    console.log("✅ File read successfully, size:", audioData.length, "bytes");
+
+    // ── Step 3: Validate API key ──
+    const apiKey = process.env.ASSEMBLY_API_KEY;
+    if (!apiKey) {
+      console.error("❌ ASSEMBLY_API_KEY is not set");
+      return res.status(500).json({
+        success: false,
+        message: "Transcription service not configured. Missing API key.",
+      });
+    }
+    console.log("✅ API key present, length:", apiKey.length);
+
+    // ── Step 4: Upload audio to AssemblyAI ──
+    console.log("⬆️ Uploading audio to AssemblyAI...");
+    let uploadResponse;
+    try {
+      uploadResponse = await axios.post(
+        "https://api.assemblyai.com/v2/upload",
+        audioData,
+        {
+          headers: {
+            authorization: apiKey,
+            "content-type": "application/octet-stream",
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          timeout: 60000, // 60s timeout for upload
+        }
+      );
+    } catch (uploadErr) {
+      console.error("❌ AssemblyAI upload failed:", {
+        status: uploadErr.response?.status,
+        statusText: uploadErr.response?.statusText,
+        data: uploadErr.response?.data,
+        message: uploadErr.message,
+      });
+      return res.status(502).json({
+        success: false,
+        message: "Failed to upload audio to transcription service",
+        error: uploadErr.response?.data?.error || uploadErr.message,
+      });
+    }
 
     const audioUrl = uploadResponse.data.upload_url;
+    console.log("✅ Audio uploaded, URL:", audioUrl);
 
-    // Start transcription
-    const transcriptResponse = await axios.post(
-      "https://api.assemblyai.com/v2/transcript",
-      {
-        audio_url: audioUrl,
-      },
-      {
-        headers: {
-          authorization: process.env.ASSEMBLY_API_KEY,
-          "content-type": "application/json",
+    // ── Step 5: Start transcription ──
+    console.log("🚀 Starting transcription...");
+    let transcriptResponse;
+    try {
+      transcriptResponse = await axios.post(
+        "https://api.assemblyai.com/v2/transcript",
+        {
+          audio_url: audioUrl,
         },
-      }
-    );
+        {
+          headers: {
+            authorization: apiKey,
+            "content-type": "application/json",
+          },
+          timeout: 30000, // 30s timeout
+        }
+      );
+    } catch (transcriptErr) {
+      console.error("❌ AssemblyAI transcript request failed:", {
+        status: transcriptErr.response?.status,
+        statusText: transcriptErr.response?.statusText,
+        data: transcriptErr.response?.data,
+        message: transcriptErr.message,
+      });
+      return res.status(502).json({
+        success: false,
+        message: "Failed to start transcription",
+        error: transcriptErr.response?.data?.error || transcriptErr.message,
+      });
+    }
 
     const transcriptId = transcriptResponse.data.id;
+    console.log("✅ Transcription started, ID:", transcriptId);
 
+    // ── Step 6: Poll for result ──
     let transcriptResult;
+    const maxPollingTime = 120000; // 2 minutes max
+    const pollingStart = Date.now();
 
     while (true) {
+      // Check timeout
+      if (Date.now() - pollingStart > maxPollingTime) {
+        console.error("❌ Polling timed out after", maxPollingTime / 1000, "seconds");
+        return res.status(504).json({
+          success: false,
+          message: "Transcription timed out. The audio may be too long. Try a shorter clip.",
+        });
+      }
+
       const polling = await axios.get(
         `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
         {
           headers: {
-            authorization: process.env.ASSEMBLY_API_KEY,
+            authorization: apiKey,
           },
+          timeout: 15000,
         }
       );
 
       transcriptResult = polling.data;
+      console.log("🔄 Polling status:", transcriptResult.status);
 
       if (transcriptResult.status === "completed") {
+        console.log("✅ Transcription completed!");
         break;
       }
 
       if (transcriptResult.status === "error") {
-        throw new Error(transcriptResult.error);
+        console.error("❌ AssemblyAI transcription error:", transcriptResult.error);
+        return res.status(502).json({
+          success: false,
+          message: "Transcription failed",
+          error: transcriptResult.error,
+        });
       }
 
       await new Promise((resolve) => setTimeout(resolve, 3000));
     }
 
-    fs.unlinkSync(req.file.path);
+    // ── Step 7: Cleanup and respond ──
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`✅ Transcription complete in ${elapsed}s, text length: ${transcriptResult.text?.length || 0}`);
 
     res.status(200).json({
       success: true,
       transcript: transcriptResult.text,
     });
   } catch (error) {
-    console.log(error);
+    console.error("❌ Unexpected transcription error:", {
+      message: error.message,
+      stack: error.stack,
+      responseStatus: error.response?.status,
+      responseData: error.response?.data,
+    });
 
     res.status(500).json({
       success: false,
       message: "Transcription failed",
       error: error.message,
     });
+  } finally {
+    // Always clean up the temp file
+    if (filePath) {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log("🧹 Temp file cleaned up:", filePath);
+        }
+      } catch (cleanupErr) {
+        console.warn("⚠️ Failed to clean up temp file:", cleanupErr.message);
+      }
+    }
   }
 };

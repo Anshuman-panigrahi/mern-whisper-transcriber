@@ -2,11 +2,19 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import fs from "fs";
 
 import authRoutes from "./routes/authRoutes.js";
 import transcribeRoutes from "./routes/transcribeRoutes.js";
 
 dotenv.config();
+
+// Ensure uploads directory exists (critical for Render ephemeral filesystem)
+const uploadsDir = "./uploads";
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log("📁 Created uploads directory");
+}
 
 const app = express();
 
